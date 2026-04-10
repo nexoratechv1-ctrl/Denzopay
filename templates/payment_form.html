@@ -1,1 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Payment Gateway (ClickPesa)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h2 { color: #1E3A5F; }
+        label { display: block; margin-top: 15px; font-weight: bold; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            margin-top: 25px;
+            width: 100%;
+            padding: 12px;
+            background: #2C5F7A;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover { background: #1E3A5F; }
+        .result { margin-top: 20px; padding: 10px; background: #e9ecef; border-radius: 8px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Test Mobile Money Payment</h2>
+        <p><strong>Sandbox mode</strong> – no real money will be deducted.</p>
+        <form id="paymentForm">
+            <label>Amount (TZS)</label>
+            <input type="number" name="amount" value="1000" required>
+            
+            <label>Phone Number (test numbers work)</label>
+            <input type="tel" name="phone" placeholder="e.g., 0712345678" required>
+            
+            <label>Select Provider</label>
+            <select name="provider" required>
+                <option value="VODACOM">M-Pesa (Vodacom)</option>
+                <option value="TIGO">Tigo Pesa</option>
+                <option value="AIRTEL">Airtel Money</option>
+                <option value="HALOTEL">Halo Pesa</option>
+            </select>
+            
+            <button type="submit">Initiate Payment</button>
+        </form>
+        <div id="result" class="result" style="display:none;"></div>
+    </div>
 
+    <script>
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = 'Processing...';
+            
+            try {
+                const response = await fetch('/initiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(data)
+                });
+                const json = await response.json();
+                if (json.success) {
+                    resultDiv.innerHTML = `<span class="success">✅ ${json.message}</span><br>Order Ref: ${json.order_ref}<br><button onclick="checkStatus('${json.order_ref}')">Check Payment Status</button>`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${json.error}</span>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="error">❌ Network error: ${err.message}</span>`;
+            }
+        });
+        
+        async function checkStatus(orderRef) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Checking status...';
+            try {
+                const response = await fetch(`/status/${orderRef}`);
+                const json = await response.json();
+                resultDiv.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="error">Error: ${err.message}</span>`;
+            }
+        }
+    </script>
+</body>
+  </html>
